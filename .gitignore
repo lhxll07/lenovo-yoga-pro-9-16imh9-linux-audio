@@ -1,0 +1,8 @@
+*.log
+*.status
+*.wav
+*.wim
+*.o
+rewrite-sof-topology
+.idea/
+.vscode/
