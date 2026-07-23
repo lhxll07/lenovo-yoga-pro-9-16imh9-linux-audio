@@ -59,18 +59,29 @@ sudo mkinitcpio -P
 ./scripts/reload-tas2781.sh
 ```
 
+实机还发现官方驱动在扬声器 PCM 关闭后执行 `PRE_SHUTDOWN`，下次打开时却因
+缓存没有完整恢复 Config，导致音质再次退化。安装脚本因此只对内置音频执行
+keepalive：保持 HDA/SOF 与 TAS2781 电源域，并禁止 WirePlumber 在 5 秒后关闭
+Speaker PCM。这样无需反复重载固件，也不会产生首次播放或拖动进度条时的卡顿。
+
+这是稳定性优先的取舍，会增加一部分空闲功耗。当前官方驱动下，零额外功耗、
+零唤醒延迟和调音永不丢失无法同时满足。
+
 ## 正常结果
 
 - ALSA 声卡名称为 `sof-hda-dsp`
 - 四路内置扬声器应用 TAS2781 原厂调音
 - ALSA 内置麦克风为 48 kHz、`S32_LE`、四通道
 - PipeWire/WirePlumber 中出现 `Digital Microphone`
+- 首次播放后 Speaker 节点保持 `idle` 或 `running`，不回到 `suspended`
 
 ## 文件说明
 
 - `firmware/sof-mtl.ri`：原厂 Intel DSP 固件，版本 `20.40.1393.0`
 - `firmware/TAS2XXX38D6.bin`：`17aa:38d6` 对应的 TAS2781 调音固件
 - `topology/sof-hda-generic-4ch-es-minimal.tplg`：实机验证通过的精简 IPC4 拓扑
+- `config/audio-keepalive.rules`：保持 HDA/SOF 和 TAS2781 电源域
+- `config/51-yoga-pro-9-speaker-keepalive.conf`：只禁用内置 Speaker 节点的 WirePlumber suspend timeout
 - `tools/rewrite-sof-topology.c`：诊断时使用的拓扑重写工具，用于说明具体删改；SOF 拓扑会随版本变化，因此安装时固定使用实测二进制，不现场重新生成
 
 厂商二进制不适用本仓库的 MIT 许可证，详见 [FIRMWARE-NOTICE.md](FIRMWARE-NOTICE.md)。
@@ -83,4 +94,4 @@ sudo mkinitcpio -P
 snd_intel_dspcfg.dsp_driver=1
 ```
 
-HDA 通常可以恢复扬声器和耳机，但无法提供依赖 Intel DSP 的内置数字麦克风。`scripts/uninstall.sh` 只删除哈希与本仓库完全一致的文件；内核参数需按所用引导器单独移除。
+HDA 通常可以恢复扬声器和耳机，但无法提供依赖 Intel DSP 的内置数字麦克风。`scripts/uninstall.sh` 只删除哈希与本仓库完全一致的文件和音频 keepalive 规则；内核参数需按所用引导器单独移除。

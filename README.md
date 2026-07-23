@@ -78,18 +78,32 @@ If the speakers work but sound thin or distorted:
 ./scripts/reload-tas2781.sh
 ```
 
+The stock driver also runs `PRE_SHUTDOWN` when the speaker PCM closes, but can
+skip restoring the full configuration on the next open because its cache is
+stale. The installer therefore keeps only the internal audio path alive: the
+HDA/SOF and TAS2781 power domains stay active, and WirePlumber does not close
+the Speaker PCM after five seconds. This avoids both repeated firmware reloads
+and stalls on first playback or timeline seeks.
+
+This is a stability-first tradeoff and raises idle power. With the current
+stock driver, zero additional idle power, zero wake latency and persistent
+tuning cannot all be achieved at once.
+
 ## Expected result
 
 - ALSA card: `sof-hda-dsp`
 - Internal speakers: all four TAS2781-backed channels with OEM tuning
 - Internal microphone: 48 kHz, `S32_LE`, four channels
 - PipeWire/WirePlumber source: `Digital Microphone`
+- Speaker node after first playback: `idle` or `running`, not `suspended`
 
 ## Files
 
 - `firmware/sof-mtl.ri`: OEM Intel DSP firmware, version `20.40.1393.0`
 - `firmware/TAS2XXX38D6.bin`: OEM TAS2781 tuning for subsystem `17aa:38d6`
 - `topology/sof-hda-generic-4ch-es-minimal.tplg`: tested reduced IPC4 topology
+- `config/audio-keepalive.rules`: keeps the HDA/SOF and TAS2781 power domains active
+- `config/51-yoga-pro-9-speaker-keepalive.conf`: disables WirePlumber's suspend timeout only for the internal Speaker node
 - `tools/rewrite-sof-topology.c`: documents the topology rewrite used during
   diagnosis; topology input formats are version-sensitive, so the installer
   uses the tested binary instead of regenerating it
@@ -107,7 +121,8 @@ snd_intel_dspcfg.dsp_driver=1
 
 That restores speaker/headphone output but normally cannot expose the internal
 DMIC. `scripts/uninstall.sh` only removes files whose hashes match this
-repository; kernel parameters must be removed separately.
+repository and the audio keepalive rules; kernel parameters must be removed
+separately.
 
 ## License
 

@@ -1,0 +1,4 @@
+# Keep the HDA/SOF power domain and TAS2781 driver state resident. The matching
+# WirePlumber rule keeps the speaker PCM open after its first playback.
+ACTION=="add|bind", SUBSYSTEM=="pci", KERNEL=="0000:00:1f.3", TEST=="power/control", ATTR{power/control}="on"
+ACTION=="add|bind", SUBSYSTEM=="i2c", KERNEL=="i2c-TIAS2781:00", TEST=="power/control", ATTR{power/control}="on"

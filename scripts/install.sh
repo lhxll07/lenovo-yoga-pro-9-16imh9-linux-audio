@@ -45,8 +45,22 @@ install -Dm0644 "$repo_dir/topology/sof-hda-generic-4ch-es-minimal.tplg" \
     /usr/lib/firmware/intel/sof-ipc4-tplg/es-custom/sof-hda-generic-4ch-es-minimal.tplg
 install -Dm0644 "$repo_dir/config/audio-runtime-pm.conf" \
     /etc/modprobe.d/yoga-pro-9-16imh9-audio.conf
+install -Dm0644 "$repo_dir/config/audio-keepalive.rules" \
+    /etc/udev/rules.d/90-yoga-pro-9-audio-keepalive.rules
+install -Dm0644 "$repo_dir/config/51-yoga-pro-9-speaker-keepalive.conf" \
+    /etc/wireplumber/wireplumber.conf.d/51-yoga-pro-9-speaker-keepalive.conf
+udevadm control --reload
+
+tas_power=/sys/bus/i2c/devices/i2c-TIAS2781:00/power/control
+hda_power=/sys/bus/pci/devices/0000:00:1f.3/power/control
+if [[ -w "$tas_power" ]]; then
+    printf on >"$tas_power"
+fi
+if [[ -w "$hda_power" ]]; then
+    printf on >"$hda_power"
+fi
 
 printf '%s\n' \
-    'Files installed and verified.' \
+    'Files and the audio keepalive rules installed and verified.' \
     'Add the three snd_sof_pci parameters documented in README.md,' \
     'rebuild the initramfs/UKI and reboot.'
